@@ -12,6 +12,7 @@
 #include "stm32l1xx_ll_lcd.h"
 #include "stm32l152_glass_lcd.h"
 #include "stdio.h"
+#include "stm32l1xx_ll_dac.h"
 
 void SystemClock_Config(void);
 
@@ -33,6 +34,8 @@ void SOUND_TIM_OC_GPIO_Config(void);
 void SOUND_TIM_OC_Config(uint16_t,float);
 void TIM4_IRQHandler(void);
 void EXTI0_IRQHandler(void);
+
+void LED_config(void);
 /* For 0.01 s update event */
 #define TIMx_PSC    3200
 #define TIMx_ARR    100
@@ -62,6 +65,7 @@ float sound_ctl = 0.5;
 
 int main()
 {
+	LED_config();
 	SystemClock_Config();
 	 MOTOR_TIM_OC_Config();
 	  //GPIO_Config_G1293d();
@@ -72,11 +76,13 @@ int main()
 		NVIC_SetPriority(EXTI0_IRQn, 1);
 	NVIC_EnableIRQ(EXTI0_IRQn);
 	//LL_TIM_EnableIT_CC1(TIM3);*/
-		
+	
+
 
 	
 	while(1)
 	{
+		
 		
 		
 		switch(state)
@@ -131,17 +137,24 @@ int main()
 									LL_GPIO_ResetOutputPin(GPIOA, LL_GPIO_PIN_0);
 									motor_state = 1;
 									SOUND_TIM_OC_Config(ARR_CALCULATE(E_O6),sound_ctl);
+								
 							}
 								else if (distanceCM < 9 && motor_state == 0){
 									sound_ctl = 0.19;
 									SOUND_TIM_OC_Config(ARR_CALCULATE(E_O6),sound_ctl);
+									DAC->DHR12R1 = 0x0000;
 									LL_mDelay(1000);
+									DAC->DHR12R1 = 0x0FFF;
 									SOUND_TIM_OC_Config(ARR_CALCULATE(MUTE),sound_ctl);
+										LL_GPIO_SetOutputPin(GPIOB, LL_GPIO_PIN_3);
+									
 							}
 								else if (distanceCM < 8 && motor_state == 0){
 									sound_ctl = 0.3;
 									SOUND_TIM_OC_Config(ARR_CALCULATE(E_O6),sound_ctl);
+									DAC->DHR12R1 = 0x0000;
 									LL_mDelay(500);
+									DAC->DHR12R1 = 0x0FFF;
 									SOUND_TIM_OC_Config(ARR_CALCULATE(MUTE),sound_ctl);
 							}
 								else if (distanceCM < 7 && motor_state == 0){
@@ -167,6 +180,20 @@ int main()
 	}
 	
 }
+
+
+
+
+
+void LED_config(void)
+{
+		//DAC
+		RCC->AHBENR |= (1<<0); //enable clock GPIOA
+		RCC->APB1ENR |= (1<<29); //enable DAC clock
+		GPIOA->MODER |= (3<<8); 
+		DAC->CR |= (1<<0); //use channel 1
+}
+
 void EXTI0_IRQHandler(void){
 	
 /* if(LL_GPIO_IsInputPinSet(GPIOA,LL_GPIO_PIN_0))
@@ -297,7 +324,7 @@ void Motor_Config_STOP(void){
 
 ///////////////////////////////////////////////////////////////
 //FOR USER BUTTON //
-//use PA0 //
+//use PA0 //PA5
 void USER_GPIO_Config(void){
 	
 	//config PA0 for USER BUTTON
@@ -311,6 +338,18 @@ void USER_GPIO_Config(void){
 		user_gpio.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
 		user_gpio.Alternate = LL_GPIO_AF_1;
 		LL_GPIO_Init(GPIOA,&user_gpio);
+	
+	//config PA5 for LED
+	/*	LL_GPIO_InitTypeDef led_gpio;
+		LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
+		
+		led_gpio.Mode = LL_GPIO_MODE_ALTERNATE;
+		led_gpio.Pull = LL_GPIO_PULL_NO;
+		led_gpio.Pin = LL_GPIO_PIN_5;
+		led_gpio.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+		led_gpio.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
+		led_gpio.Alternate = LL_GPIO_AF_1;
+		LL_GPIO_Init(GPIOA,&led_gpio);*/
 	
 }
 ///////////////////////////////////////////////////////////////
