@@ -30,7 +30,7 @@ void Motor_Config_STOP(void);
 void SOUND_TIM_BASE_DurationConfig(void);
 void SOUND_TIM_BASE_Config(uint16_t);
 void SOUND_TIM_OC_GPIO_Config(void);
-void SOUND_TIM_OC_Config(uint16_t);
+void SOUND_TIM_OC_Config(uint16_t,float);
 void TIM4_IRQHandler(void);
 void EXTI0_IRQHandler(void);
 /* For 0.01 s update event */
@@ -53,6 +53,12 @@ uint32_t PSC;
 
 int motor_state = 0;
 
+#define E_O6					(uint16_t)1318
+#define MUTE					(uint16_t) 1
+#define ARR_CALCULATE(N) ((32000000) / ((TIMx_PSC) * (N)))
+float sound_ctl = 0.5;
+
+
 int main()
 {
 	SystemClock_Config();
@@ -65,8 +71,12 @@ int main()
 		NVIC_SetPriority(EXTI0_IRQn, 1);
 	NVIC_EnableIRQ(EXTI0_IRQn);
 	//LL_TIM_EnableIT_CC1(TIM3);*/
+		
+
+	
 	while(1)
 	{
+		
 		
 		switch(state)
 			{
@@ -114,21 +124,24 @@ int main()
 							distance = (period * 350) / 2; //meter unit
 							distanceCM = distance*100;
 						
-							
-							
+						
 							if (distanceCM < 5 && motor_state == 0){
 								Motor_Config_STOP();
 									LL_GPIO_ResetOutputPin(GPIOA, LL_GPIO_PIN_0);
 									motor_state = 1;
+									SOUND_TIM_OC_Config(ARR_CALCULATE(E_O6),sound_ctl);
+							}
+								else if (distanceCM < 9 && motor_state == 0){
+									sound_ctl = 0.19;
+									SOUND_TIM_OC_Config(ARR_CALCULATE(E_O6),sound_ctl);
 							}
 							else if(distanceCM >= 5 && LL_GPIO_IsInputPinSet(GPIOA,LL_GPIO_PIN_0))
 							{
 								Motor_Config_RIGHT();
+								SOUND_TIM_OC_Config(ARR_CALCULATE(MUTE),sound_ctl);
+				
 							}
-
-
-
-
+						
 						}
 						state = 0;
 					}
@@ -318,35 +331,20 @@ void HCSR04_GPIO_Config(void){
 //FOR SPEAKER ONLY//
 //USE TIM4 TIM2 PB6
 
-void SOUND_TIM_BASE_DurationConfig(void)
-{
-	LL_TIM_InitTypeDef timbase_initstructure;
-	//USE TIM2
-	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM2);
-	//Time-base configure
-	timbase_initstructure.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
-	timbase_initstructure.CounterMode = LL_TIM_COUNTERMODE_UP;
-	timbase_initstructure.Autoreload = 500 - 1;
-	timbase_initstructure.Prescaler =  32000 - 1;
-	LL_TIM_Init(TIM2, &timbase_initstructure);
-	
-	LL_TIM_EnableCounter(TIM2); 
-	LL_TIM_ClearFlag_UPDATE(TIM2); //Force clear update flag
-}
 
 void SOUND_TIM_BASE_Config(uint16_t ARR)
 {
 	LL_TIM_InitTypeDef timbase_initstructure;
-	//USE TIM4
+	
 	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM4);
-	//Time-base configure
+	
 	timbase_initstructure.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
 	timbase_initstructure.CounterMode = LL_TIM_COUNTERMODE_UP;
 	timbase_initstructure.Autoreload = ARR - 1;
 	timbase_initstructure.Prescaler =  TIMx_PSC- 1;
 	LL_TIM_Init(TIM4, &timbase_initstructure);
 	
-	LL_TIM_EnableCounter(TIM4); 
+	LL_TIM_EnableCounter(TIM4);
 }
 
 void SOUND_TIM_OC_GPIO_Config(void)
@@ -354,7 +352,7 @@ void SOUND_TIM_OC_GPIO_Config(void)
 	LL_GPIO_InitTypeDef gpio_initstructure;
 	
 	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOB);
-	//config PB6 for Speaker 
+	
 	gpio_initstructure.Mode = LL_GPIO_MODE_ALTERNATE;
 	gpio_initstructure.Alternate = LL_GPIO_AF_2;
 	gpio_initstructure.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
@@ -362,11 +360,23 @@ void SOUND_TIM_OC_GPIO_Config(void)
 	gpio_initstructure.Pull = LL_GPIO_PULL_NO;
 	gpio_initstructure.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
 	LL_GPIO_Init(GPIOB, &gpio_initstructure);
+	
+	/*LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
+	
+	gpio_initstructure.Mode = LL_GPIO_MODE_INPUT;
+	gpio_initstructure.Pin = LL_GPIO_PIN_0;
+	gpio_initstructure.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+	gpio_initstructure.Pull = LL_GPIO_PULL_NO;
+	gpio_initstructure.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+	
+	LL_GPIO_Init(GPIOA, &gpio_initstructure);*/
+
 }
 
-void SOUND_TIM_OC_Config(uint16_t note)
+void SOUND_TIM_OC_Config(uint16_t note,float sctl)
 {
 	LL_TIM_OC_InitTypeDef tim_oc_initstructure;
+	
 	
 	SOUND_TIM_OC_GPIO_Config();
 	SOUND_TIM_BASE_Config(note);
@@ -374,8 +384,12 @@ void SOUND_TIM_OC_Config(uint16_t note)
 	tim_oc_initstructure.OCState = LL_TIM_OCSTATE_DISABLE;
 	tim_oc_initstructure.OCMode = LL_TIM_OCMODE_PWM1;
 	tim_oc_initstructure.OCPolarity = LL_TIM_OCPOLARITY_HIGH;
-	tim_oc_initstructure.CompareValue = LL_TIM_GetAutoReload(TIM4) /2;
+//	tim_oc_initstructure.CompareValue = LL_TIM_GetAutoReload(TIM4); //100% duty
+	tim_oc_initstructure.CompareValue = LL_TIM_GetAutoReload(TIM4) * sctl; //50% duty
+	//tim_oc_initstructure.CompareValue = LL_TIM_GetAutoReload(TIM4) / 4 ;//25% duty
 	LL_TIM_OC_Init(TIM4, LL_TIM_CHANNEL_CH1, &tim_oc_initstructure);
+	
+
 	/*Interrupt Configure*/
 	NVIC_SetPriority(TIM4_IRQn, 1);
 	NVIC_EnableIRQ(TIM4_IRQn);
@@ -388,12 +402,12 @@ void SOUND_TIM_OC_Config(uint16_t note)
 
 void TIM4_IRQHandler(void)
 {
-	//for clear flag
 	if(LL_TIM_IsActiveFlag_CC1(TIM4) == SET)
 	{
 		LL_TIM_ClearFlag_CC1(TIM4);
 	}
 }
+
 ///////////////////////////////////////////////////
 
 void SystemClock_Config(void)
