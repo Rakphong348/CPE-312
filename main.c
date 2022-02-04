@@ -54,6 +54,7 @@ uint32_t PSC;
 int motor_state = 0;
 
 #define E_O6					(uint16_t)1318
+#define G_O6					(uint16_t)1568
 #define MUTE					(uint16_t) 1
 #define ARR_CALCULATE(N) ((32000000) / ((TIMx_PSC) * (N)))
 float sound_ctl = 0.5;
@@ -124,7 +125,7 @@ int main()
 							distance = (period * 350) / 2; //meter unit
 							distanceCM = distance*100;
 						
-						
+							
 							if (distanceCM < 5 && motor_state == 0){
 								Motor_Config_STOP();
 									LL_GPIO_ResetOutputPin(GPIOA, LL_GPIO_PIN_0);
@@ -134,6 +135,20 @@ int main()
 								else if (distanceCM < 9 && motor_state == 0){
 									sound_ctl = 0.19;
 									SOUND_TIM_OC_Config(ARR_CALCULATE(E_O6),sound_ctl);
+									LL_mDelay(1000);
+									SOUND_TIM_OC_Config(ARR_CALCULATE(MUTE),sound_ctl);
+							}
+								else if (distanceCM < 8 && motor_state == 0){
+									sound_ctl = 0.3;
+									SOUND_TIM_OC_Config(ARR_CALCULATE(E_O6),sound_ctl);
+									LL_mDelay(500);
+									SOUND_TIM_OC_Config(ARR_CALCULATE(MUTE),sound_ctl);
+							}
+								else if (distanceCM < 7 && motor_state == 0){
+									sound_ctl = 0.4;
+									SOUND_TIM_OC_Config(ARR_CALCULATE(E_O6),sound_ctl);
+									LL_mDelay(200);
+									SOUND_TIM_OC_Config(ARR_CALCULATE(MUTE),sound_ctl);
 							}
 							else if(distanceCM >= 5 && LL_GPIO_IsInputPinSet(GPIOA,LL_GPIO_PIN_0))
 							{
@@ -361,15 +376,6 @@ void SOUND_TIM_OC_GPIO_Config(void)
 	gpio_initstructure.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
 	LL_GPIO_Init(GPIOB, &gpio_initstructure);
 	
-	/*LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
-	
-	gpio_initstructure.Mode = LL_GPIO_MODE_INPUT;
-	gpio_initstructure.Pin = LL_GPIO_PIN_0;
-	gpio_initstructure.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-	gpio_initstructure.Pull = LL_GPIO_PULL_NO;
-	gpio_initstructure.Speed = LL_GPIO_SPEED_FREQ_HIGH;
-	
-	LL_GPIO_Init(GPIOA, &gpio_initstructure);*/
 
 }
 
@@ -384,9 +390,8 @@ void SOUND_TIM_OC_Config(uint16_t note,float sctl)
 	tim_oc_initstructure.OCState = LL_TIM_OCSTATE_DISABLE;
 	tim_oc_initstructure.OCMode = LL_TIM_OCMODE_PWM1;
 	tim_oc_initstructure.OCPolarity = LL_TIM_OCPOLARITY_HIGH;
-//	tim_oc_initstructure.CompareValue = LL_TIM_GetAutoReload(TIM4); //100% duty
-	tim_oc_initstructure.CompareValue = LL_TIM_GetAutoReload(TIM4) * sctl; //50% duty
-	//tim_oc_initstructure.CompareValue = LL_TIM_GetAutoReload(TIM4) / 4 ;//25% duty
+	tim_oc_initstructure.CompareValue = LL_TIM_GetAutoReload(TIM4) * sctl; 
+
 	LL_TIM_OC_Init(TIM4, LL_TIM_CHANNEL_CH1, &tim_oc_initstructure);
 	
 
