@@ -33,99 +33,59 @@ void SOUND_TIM_BASE_Config(uint16_t);
 void SOUND_TIM_OC_GPIO_Config(void);
 void SOUND_TIM_OC_Config(uint16_t,float);
 void TIM4_IRQHandler(void);
-void EXTI0_IRQHandler(void);
+
 
 void LED_config(void);
 /* For 0.01 s update event */
 #define TIMx_PSC    3200
 #define TIMx_ARR    100
 
-int test=0;
-int test1=0;
 
+//ultra sonic
 uint16_t rise_timestamp = 0;
 uint16_t fall_timestamp = 0;
 uint16_t up_cycle = 0;
-
 uint8_t state = 0;
 float period = 0;
 float distance = 0;
 float distanceCM = 0;
-
 uint32_t TIM2CLK;
 uint32_t PSC;
 
+//motor
 int motor_state = 0;
+
+
+//Sound
 #define TIMx_PSC_sound			2 
-#define E_O6					(uint16_t)1318
-#define MUTE					(uint16_t) 1
 #define ARR_CALCULATE(N) ((32000000) / ((TIMx_PSC_sound) * (N)))
 float sound_ctl = 0.5;
 int sound_state =1;
-
-#define Ab_4                (uint16_t)415
-#define Ab_5                (uint16_t)830
-#define Ab_6                (uint16_t)1661
-#define A_4                 (uint16_t)440
 #define A_5                 (uint16_t)880
-#define A_6                 (uint16_t)1760
-#define Bb_4                (uint16_t)466
-#define Bb_5                (uint16_t)932
-#define Bb_6                (uint16_t)1865
-#define B_4                 (uint16_t)494
-#define B_5                 (uint16_t)988
-#define B_6                 (uint16_t)1976
-#define C_4                (uint16_t)261
-#define C_5                (uint16_t)523
-#define C_6                 (uint16_t)1046
-#define Db_4                (uint16_t)277
-#define Db_5                (uint16_t)554
-#define Db_6                (uint16_t)1109
-#define D_4                 (uint16_t)293
-#define D_5                 (uint16_t)587
-#define D_6                 (uint16_t)1174
-#define Eb_4                (uint16_t)311
-#define Eb_5                (uint16_t)622
-#define Eb_6                (uint16_t)1244
-#define E_4                 (uint16_t)329
-#define E_5                 (uint16_t)659
 #define E_6                 (uint16_t)1318
-#define F_4                 (uint16_t)350
-#define F_5                 (uint16_t)698
-#define F_6                 (uint16_t)1397
-#define Gb_4                (uint16_t)370
-#define Gb_5                (uint16_t)740
-#define Gb_6                (uint16_t)1480
-#define G_4                 (uint16_t)392
-#define G_5                 (uint16_t)784
-#define G_6                 (uint16_t)1568
-
+#define MUTE					(uint16_t) 1
 int sheetnote[] = {A_5,MUTE,A_5,MUTE};
 int i=0;
+
 int main()
 {
 
 		LED_config();
-	SystemClock_Config();
-	 MOTOR_TIM_OC_Config();
+  	SystemClock_Config();
+	
+	  MOTOR_TIM_OC_Config();
+ 
+	  Motor_Config_LEFT();
 
-	 Motor_Config_LEFT();
-
-	HCSR04_GPIO_Config();
+	 HCSR04_GPIO_Config();
 	 USER_GPIO_Config();
 	
-	SOUND_TIM_BASE_DurationConfig();
+	 SOUND_TIM_BASE_DurationConfig();
 		
 
-	
-
-
-	
 	while(1)
 	{
-		
-
-		
+			
 		switch(state)
 			{
 				case 0:
@@ -194,7 +154,7 @@ int main()
 													LL_TIM_SetAutoReload(TIM9,200);
 													sound_state=0;
 													DAC->DHR12R1 = 0x0FFF;
-													test++;
+												
 													}
 													else
 												{
@@ -203,7 +163,7 @@ int main()
 													LL_TIM_SetAutoReload(TIM9,500);
 													sound_state=1;
 													DAC->DHR12R1 = 0x0000;
-													test1++;
+													
 													}		
 													LL_TIM_ClearFlag_UPDATE(TIM9);
 													LL_TIM_SetCounter(TIM9, 0);
