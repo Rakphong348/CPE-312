@@ -20,7 +20,6 @@ void USER_GPIO_Config(void);
 
 void HCSR04_GPIO_Config(void);
 
-void L293D_GPIO_Config(void);
 void MOTOR_TIM_BASE_Config(void);
 void MOTOR_TIM_OC_GPIO_Config(void);
 void MOTOR_TIM_OC_Config(void);
@@ -75,7 +74,7 @@ int main()
 	
 	  MOTOR_TIM_OC_Config();
  
-	  Motor_Config_LEFT();
+	  Motor_Config_RIGHT();
 
 	 HCSR04_GPIO_Config();
 	 USER_GPIO_Config();
@@ -133,7 +132,7 @@ int main()
 							distanceCM = distance*100;
 						
 							
-							if (distanceCM < 5 && (motor_state !=2)){
+							if (distanceCM < 10 && (motor_state !=2)){
 								Motor_Config_STOP();
 									LL_GPIO_ResetOutputPin(GPIOA, LL_GPIO_PIN_0);
 									motor_state = 1;
@@ -142,7 +141,7 @@ int main()
 									DAC->DHR12R1 = 0x0FFF;
 								
 							}
-								else if (distanceCM < 12 && distanceCM > 5 && motor_state == 0){
+								else if (distanceCM < 15 && distanceCM > 10 && motor_state == 0){
 									sound_ctl = 0.2;
 									SOUND_TIM_OC_Config(ARR_CALCULATE(sheetnote[i]),sound_ctl);									
 						
@@ -179,7 +178,7 @@ int main()
 								
 						if(LL_GPIO_IsInputPinSet(GPIOA,LL_GPIO_PIN_0) && (motor_state ==1))
 							{
-								Motor_Config_RIGHT();
+								Motor_Config_LEFT();
 								LL_TIM_DisableCounter(TIM4);
 								motor_state = 2;
 								DAC->DHR12R1 = 0x0000;
@@ -254,8 +253,7 @@ void MOTOR_TIM_OC_Config(void){
 
   MOTOR_TIM_BASE_Config();
   MOTOR_TIM_OC_GPIO_Config(); 
-	L293D_GPIO_Config(); ////for PIN4 is H , PIN5 L and PIN7 is EN
-
+	
 
   tim_oc_initstructure.OCState = LL_TIM_OCSTATE_DISABLE;
 	tim_oc_initstructure.OCMode = LL_TIM_OCMODE_PWM1;
@@ -275,9 +273,11 @@ void MOTOR_TIM_OC_Config(void){
 }
 
 
-void L293D_GPIO_Config(void)
-{
-	//for active MOTOR
+
+
+void Motor_Config_RIGHT(void){
+	
+	 	//for active MOTOR
 	  LL_GPIO_InitTypeDef l293d_initstruct;
 	
     //Move LEFT//
@@ -290,21 +290,6 @@ void L293D_GPIO_Config(void)
     l293d_initstruct.Pin = LL_GPIO_PIN_4 |LL_GPIO_PIN_7; 
 		LL_GPIO_Init(GPIOB, &l293d_initstruct);
 	
-		//Motor_Config_LEFT();
-	
-		//Move RIGHT//
-
-	/*	l293d_initstruct.Mode = LL_GPIO_MODE_OUTPUT;
-    l293d_initstruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-    l293d_initstruct.Pull = LL_GPIO_PULL_NO;
-    l293d_initstruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
-    l293d_initstruct.Pin = LL_GPIO_PIN_5 |LL_GPIO_PIN_7 ;
-    LL_GPIO_Init(GPIOB, &l293d_initstruct);
-		
-		Motor_Config_RIGHT();*/	
-}
-
-void Motor_Config_RIGHT(void){
 	//Enable
 	LL_GPIO_SetOutputPin(GPIOB, LL_GPIO_PIN_7);
 	//PB4 is L
@@ -312,6 +297,17 @@ void Motor_Config_RIGHT(void){
 
 }
 void Motor_Config_LEFT(void){
+
+	
+	LL_GPIO_InitTypeDef l293d_initstruct;  
+		LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOB);
+		l293d_initstruct.Mode = LL_GPIO_MODE_OUTPUT;
+    l293d_initstruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+    l293d_initstruct.Pull = LL_GPIO_PULL_NO;
+    l293d_initstruct.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
+    l293d_initstruct.Pin = LL_GPIO_PIN_5 |LL_GPIO_PIN_7 ;
+    LL_GPIO_Init(GPIOB, &l293d_initstruct);
+	
 	//Enable
 	LL_GPIO_SetOutputPin(GPIOB, LL_GPIO_PIN_7);
 	//PB5 is L
