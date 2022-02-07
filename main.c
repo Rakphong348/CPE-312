@@ -41,6 +41,7 @@ void LED_config(void);
 #define TIMx_ARR    100
 
 int test=0;
+int test1=0;
 
 uint16_t rise_timestamp = 0;
 uint16_t fall_timestamp = 0;
@@ -55,27 +56,67 @@ uint32_t TIM2CLK;
 uint32_t PSC;
 
 int motor_state = 0;
-
+#define TIMx_PSC_sound			2 
 #define E_O6					(uint16_t)1318
-#define G_O6					(uint16_t)1568
 #define MUTE					(uint16_t) 1
-#define ARR_CALCULATE(N) ((32000000) / ((TIMx_PSC) * (N)))
+#define ARR_CALCULATE(N) ((32000000) / ((TIMx_PSC_sound) * (N)))
 float sound_ctl = 0.5;
+int sound_state =1;
 
+#define Ab_4                (uint16_t)415
+#define Ab_5                (uint16_t)830
+#define Ab_6                (uint16_t)1661
+#define A_4                 (uint16_t)440
+#define A_5                 (uint16_t)880
+#define A_6                 (uint16_t)1760
+#define Bb_4                (uint16_t)466
+#define Bb_5                (uint16_t)932
+#define Bb_6                (uint16_t)1865
+#define B_4                 (uint16_t)494
+#define B_5                 (uint16_t)988
+#define B_6                 (uint16_t)1976
+#define C_4                (uint16_t)261
+#define C_5                (uint16_t)523
+#define C_6                 (uint16_t)1046
+#define Db_4                (uint16_t)277
+#define Db_5                (uint16_t)554
+#define Db_6                (uint16_t)1109
+#define D_4                 (uint16_t)293
+#define D_5                 (uint16_t)587
+#define D_6                 (uint16_t)1174
+#define Eb_4                (uint16_t)311
+#define Eb_5                (uint16_t)622
+#define Eb_6                (uint16_t)1244
+#define E_4                 (uint16_t)329
+#define E_5                 (uint16_t)659
+#define E_6                 (uint16_t)1318
+#define F_4                 (uint16_t)350
+#define F_5                 (uint16_t)698
+#define F_6                 (uint16_t)1397
+#define Gb_4                (uint16_t)370
+#define Gb_5                (uint16_t)740
+#define Gb_6                (uint16_t)1480
+#define G_4                 (uint16_t)392
+#define G_5                 (uint16_t)784
+#define G_6                 (uint16_t)1568
 
+int sheetnote[] = {A_5,MUTE,A_5,MUTE};
+int i=0;
 int main()
 {
-	LED_config();
+
+		LED_config();
 	SystemClock_Config();
 	 MOTOR_TIM_OC_Config();
-	  //GPIO_Config_G1293d();
+
 	 Motor_Config_LEFT();
-	//Motor_Config_STOP();
+
 	HCSR04_GPIO_Config();
 	 USER_GPIO_Config();
-		NVIC_SetPriority(EXTI0_IRQn, 1);
-	NVIC_EnableIRQ(EXTI0_IRQn);
-	//LL_TIM_EnableIT_CC1(TIM3);*/
+	
+	SOUND_TIM_BASE_DurationConfig();
+		
+
 	
 
 
@@ -83,7 +124,7 @@ int main()
 	while(1)
 	{
 		
-		
+
 		
 		switch(state)
 			{
@@ -132,41 +173,56 @@ int main()
 							distanceCM = distance*100;
 						
 							
-							if (distanceCM < 5 && motor_state == 0){
+							if (distanceCM < 5 && (motor_state !=2)){
 								Motor_Config_STOP();
 									LL_GPIO_ResetOutputPin(GPIOA, LL_GPIO_PIN_0);
 									motor_state = 1;
-									SOUND_TIM_OC_Config(ARR_CALCULATE(E_O6),sound_ctl);
+									sound_ctl = 0.5;
+									SOUND_TIM_OC_Config(ARR_CALCULATE(E_6),sound_ctl);
+									DAC->DHR12R1 = 0x0FFF;
 								
 							}
-								else if (distanceCM < 9 && motor_state == 0){
-									sound_ctl = 0.19;
-									SOUND_TIM_OC_Config(ARR_CALCULATE(E_O6),sound_ctl);
-									DAC->DHR12R1 = 0x0000;
-									LL_mDelay(1000);
-									DAC->DHR12R1 = 0x0FFF;
-									SOUND_TIM_OC_Config(ARR_CALCULATE(MUTE),sound_ctl);
-										LL_GPIO_SetOutputPin(GPIOB, LL_GPIO_PIN_3);
+								else if (distanceCM < 12 && distanceCM > 5 && motor_state == 0){
+									sound_ctl = 0.2;
+									SOUND_TIM_OC_Config(ARR_CALCULATE(sheetnote[i]),sound_ctl);									
+						
+									if(LL_TIM_IsActiveFlag_UPDATE(TIM9) == SET)
+											{
+													if(sound_state)
+													{
+													LL_TIM_DisableCounter(TIM4);
+													LL_TIM_SetAutoReload(TIM9,200);
+													sound_state=0;
+													DAC->DHR12R1 = 0x0FFF;
+													test++;
+													}
+													else
+												{
+													LL_TIM_SetAutoReload(TIM4, ARR_CALCULATE(sheetnote[++i])); 
+													LL_TIM_EnableCounter(TIM4);
+													LL_TIM_SetAutoReload(TIM9,500);
+													sound_state=1;
+													DAC->DHR12R1 = 0x0000;
+													test1++;
+													}		
+													LL_TIM_ClearFlag_UPDATE(TIM9);
+													LL_TIM_SetCounter(TIM9, 0);
+													if(i>3)
+													{
+													i=0;
+													}
+											}
+										
 									
 							}
-								else if (distanceCM < 8 && motor_state == 0){
-									sound_ctl = 0.3;
-									SOUND_TIM_OC_Config(ARR_CALCULATE(E_O6),sound_ctl);
-									DAC->DHR12R1 = 0x0000;
-									LL_mDelay(500);
-									DAC->DHR12R1 = 0x0FFF;
-									SOUND_TIM_OC_Config(ARR_CALCULATE(MUTE),sound_ctl);
-							}
-								else if (distanceCM < 7 && motor_state == 0){
-									sound_ctl = 0.4;
-									SOUND_TIM_OC_Config(ARR_CALCULATE(E_O6),sound_ctl);
-									LL_mDelay(200);
-									SOUND_TIM_OC_Config(ARR_CALCULATE(MUTE),sound_ctl);
-							}
-							else if(distanceCM >= 5 && LL_GPIO_IsInputPinSet(GPIOA,LL_GPIO_PIN_0))
+								
+								
+						if(LL_GPIO_IsInputPinSet(GPIOA,LL_GPIO_PIN_0) && (motor_state ==1))
 							{
 								Motor_Config_RIGHT();
-								SOUND_TIM_OC_Config(ARR_CALCULATE(MUTE),sound_ctl);
+								LL_TIM_DisableCounter(TIM4);
+								motor_state = 2;
+								DAC->DHR12R1 = 0x0000;
 				
 							}
 						
@@ -183,7 +239,9 @@ int main()
 
 
 
-
+////////////////////////////////////
+////FOR LED ///////////
+//USE PA4 ////
 
 void LED_config(void)
 {
@@ -194,15 +252,6 @@ void LED_config(void)
 		DAC->CR |= (1<<0); //use channel 1
 }
 
-void EXTI0_IRQHandler(void){
-	
-/* if(LL_GPIO_IsInputPinSet(GPIOA,LL_GPIO_PIN_0))
-    {
-		
-
-	
-}*/
-}
 
 ////////////////////////////////////////////////////////////
 ///FOR MOTOR //
@@ -251,21 +300,13 @@ void MOTOR_TIM_OC_Config(void){
   tim_oc_initstructure.OCState = LL_TIM_OCSTATE_DISABLE;
 	tim_oc_initstructure.OCMode = LL_TIM_OCMODE_PWM1;
 	tim_oc_initstructure.OCPolarity = LL_TIM_OCPOLARITY_HIGH;
-	tim_oc_initstructure.CompareValue = TIMx_ARR; //20% duty cycle
-	//tim_oc_initstructure.CompareValue = TIMx_ARR * 0.4; //40% duty cycle
-	//tim_oc_initstructure.CompareValue = TIMx_ARR * 0.6; //60% duty cycle
-	//tim_oc_initstructure.CompareValue = TIMx_ARR * 0.8; //80% duty cycle
-	//tim_oc_initstructure.CompareValue = TIMx_ARR ; //100% duty cycle
+	tim_oc_initstructure.CompareValue = TIMx_ARR; 
 
 
   /*PB4 -> (TIM3_CH1) */
   LL_TIM_OC_Init(TIM3, LL_TIM_CHANNEL_CH1, &tim_oc_initstructure);
 	LL_TIM_OC_Init(TIM3, LL_TIM_CHANNEL_CH2, &tim_oc_initstructure);
 
-  /*//Interrupt Configure
-	NVIC_SetPriority(TIM3_IRQn, 1);
-	NVIC_EnableIRQ(TIM3_IRQn);
-	LL_TIM_EnableIT_CC1(TIM3);*/
 
   /*Start Output Compare in PWM Mode and Open LED*/
   LL_TIM_CC_EnableChannel(TIM3, LL_TIM_CHANNEL_CH1);
@@ -324,7 +365,7 @@ void Motor_Config_STOP(void){
 
 ///////////////////////////////////////////////////////////////
 //FOR USER BUTTON //
-//use PA0 //PA5
+//use PA0 //
 void USER_GPIO_Config(void){
 	
 	//config PA0 for USER BUTTON
@@ -339,23 +380,14 @@ void USER_GPIO_Config(void){
 		user_gpio.Alternate = LL_GPIO_AF_1;
 		LL_GPIO_Init(GPIOA,&user_gpio);
 	
-	//config PA5 for LED
-	/*	LL_GPIO_InitTypeDef led_gpio;
-		LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
-		
-		led_gpio.Mode = LL_GPIO_MODE_ALTERNATE;
-		led_gpio.Pull = LL_GPIO_PULL_NO;
-		led_gpio.Pin = LL_GPIO_PIN_5;
-		led_gpio.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-		led_gpio.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
-		led_gpio.Alternate = LL_GPIO_AF_1;
-		LL_GPIO_Init(GPIOA,&led_gpio);*/
+	NVIC_SetPriority(EXTI0_IRQn, 1);
+	NVIC_EnableIRQ(EXTI0_IRQn);
 	
 }
 ///////////////////////////////////////////////////////////////
 ////////////////
 //FOR ULTRA SONIC//
-// USE PA1 PA2//
+// USE PA1 PA2 TIM2//
 void HCSR04_GPIO_Config(void){
 	
 		//config PA1 and PA2 for UltraSonic
@@ -383,8 +415,22 @@ void HCSR04_GPIO_Config(void){
 
 ////////////////////////////////////////
 //FOR SPEAKER ONLY//
-//USE TIM4 TIM2 PB6
-
+//USE TIM4 TIM9 PB6//
+void SOUND_TIM_BASE_DurationConfig(void)
+{
+	LL_TIM_InitTypeDef timbase_initstructure;
+	
+	LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM9);
+	//Time-base configure
+	timbase_initstructure.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
+	timbase_initstructure.CounterMode = LL_TIM_COUNTERMODE_UP;
+	timbase_initstructure.Autoreload = 500 - 1;
+	timbase_initstructure.Prescaler =  32000 - 1;
+	LL_TIM_Init(TIM9, &timbase_initstructure);
+	
+	LL_TIM_EnableCounter(TIM9); 
+	LL_TIM_ClearFlag_UPDATE(TIM9); //Force clear update flag
+}
 
 void SOUND_TIM_BASE_Config(uint16_t ARR)
 {
@@ -395,7 +441,7 @@ void SOUND_TIM_BASE_Config(uint16_t ARR)
 	timbase_initstructure.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
 	timbase_initstructure.CounterMode = LL_TIM_COUNTERMODE_UP;
 	timbase_initstructure.Autoreload = ARR - 1;
-	timbase_initstructure.Prescaler =  TIMx_PSC- 1;
+	timbase_initstructure.Prescaler =  TIMx_PSC_sound- 1;
 	LL_TIM_Init(TIM4, &timbase_initstructure);
 	
 	LL_TIM_EnableCounter(TIM4);
